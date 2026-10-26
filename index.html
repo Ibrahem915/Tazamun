@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تزامن | Tazamun - إدارة المهام والاجتماعات المشتركة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <style>
+        
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #060b19;
+            background-image: radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.12), transparent 35%),
+                radial-gradient(circle at 85% 80%, rgba(79, 70, 229, 0.1), transparent 35%);
+        }
+         .flatpickr-calendar { font-family: 'Cairo', sans-serif; border: 1px solid #334155; }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.65);
+        }
+
+        .progress-gradient {
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 55%, #3730a3 100%);
+        }
+
+        .ring-progress {
+            transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="text-slate-100 min-h-screen pb-12">
+
+    <!--==================================================
+        الشريط العلوي (Navbar)
+    ===================================================-->
+    <nav class="border-b border-slate-800/80 bg-[#080e20]/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+
+            <!-- الشعار -->
+            <div class="flex items-center gap-3.5">
+                <div
+                    class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5">
+                        <h1 class="text-xl font-extrabold text-white tracking-wide">تزامن | Tazamun</h1>
+                        <span
+                            class="text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">مزامنة
+                            حية</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">إدارة المهام الحقيقية (Tasks) والاجتماعات المشتركة (Google
+                        Meet)</p>
+                </div>
+            </div>
+
+
+
+            <!-- أزرار الاتصال والمزامنة -->
+            <div class="flex items-center gap-2.5">
+                <button id="authorizeBtn" onclick="GoogleApiService.signIn()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/20 hidden">
+                    🔗 ربط Google Calendar & Tasks
+                </button>
+                <button id="refreshBtn" onclick="GoogleApiService.syncAllData()"
+                    class="bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                    مزامنة فورية
+                </button>
+                <button id="signoutBtn" onclick="GoogleApiService.signOut()"
+                    class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 px-3 py-2.5 rounded-xl text-xs font-bold transition hidden">
+                    خروج
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!--==================================================
+        المحتوى الرئيسي
+    ===================================================-->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 mt-6">
+        <div id="mainGrid" class="grid grid-cols-1 gap-6">
+
+            <!-- القسم الأول: لوحة تحكم الكمبيوتر -->
+            <section id="webDashboardSection" class="space-y-6">
+
+                <!-- الصف العلوي: الإحصائيات + حلقة الإنجاز -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+                    <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col justify-between">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex flex-col items-center justify-center">
+                                    <span id="todayMonthStr"
+                                        class="text-[9px] text-blue-400 font-bold uppercase">OCT</span>
+                                    <span id="todayDayNum"
+                                        class="text-base font-extrabold text-white leading-none mt-0.5">23</span>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                                        <h2 id="connectionTitle" class="font-bold text-white text-base">بانتظار ربط
+                                            الحساب</h2>
+                                    </div>
+                                    <p id="syncSubtext" class="text-xs text-slate-400 mt-0.5">يدعم Google Calendar API +
+                                        Google Tasks API</p>
+                                </div>
+                            </div>
+                            <span
+                                class="text-[11px] font-mono bg-slate-800/90 text-slate-300 border border-slate-700 px-3 py-1 rounded-lg">
+                                Calendar + Tasks v3
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3.5 mt-5">
+                            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 text-center">
+                                <p class="text-xs text-slate-400">إجمالي اليوم</p>
+                                <p id="statTotal" class="text-2xl font-extrabold text-white mt-1">0</p>
+                            </div>
+                            <div class="bg-emerald-950/25 border border-emerald-500/20 rounded-xl p-3.5 text-center">
+                                <p class="text-xs text-emerald-400/90">تم إنجازها</p>
+                                <p id="statCompleted" class="text-2xl font-extrabold text-emerald-400 mt-1">0</p>
+                            </div>
+                            <div class="bg-amber-950/25 border border-amber-500/20 rounded-xl p-3.5 text-center">
+                                <p class="text-xs text-amber-400/90">قيد الانتظار</p>
+                                <p id="statPending" class="text-2xl font-extrabold text-amber-400 mt-1">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="lg:col-span-5 progress-gradient rounded-2xl p-6 flex items-center justify-between shadow-xl shadow-indigo-950/50 relative overflow-hidden">
+                        <div
+                            class="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none">
+                        </div>
+                        <div class="space-y-2 z-10 max-w-[62%]">
+                            <span
+                                class="inline-block text-[11px] font-bold bg-white/20 text-white px-3 py-0.5 rounded-full backdrop-blur-sm">
+                                إنجاز مهام اليوم
+                            </span>
+                            <h3 class="text-xl font-extrabold text-white leading-snug">
+                                يوم حافل بالإنجازات ينتظرك 💪
+                            </h3>
+                            <p class="text-xs text-blue-100/80 leading-relaxed">
+                                المهام المشتركة والاجتماعات تتحدث فورياً مع حالات قبول المدعوين.
+                            </p>
+                        </div>
+
+                        <div class="relative w-28 h-28 flex items-center justify-center z-10 flex-shrink-0">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8"
+                                    fill="transparent" />
+                                <circle id="progressRingCircle" cx="50" cy="50" r="40" stroke="#ffffff" stroke-width="8"
+                                    fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2"
+                                    stroke-linecap="round" class="ring-progress" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span id="progressPercentText" class="text-xl font-extrabold text-white">0%</span>
+                                <span class="text-[10px] text-blue-100">مكتمل</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بطاقة إضافة مهمة أو اجتماع جديد + زر إضافة المدعوين -->
+                <div class="glass-card rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span
+                                class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">+</span>
+                            إضافة مهمة (Google Task) أو اجتماع (Google Meet) مع مدعوين
+                        </h3>
+                        <span class="text-[11px] text-slate-400">عند اختيار اجتماع يتم إنشاء رابط Google Meet تلقائي
+                            للمدعوين</span>
+                    </div>
+
+                    <form id="addEventForm" onsubmit="AppActions.handleCreateSubmit(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+
+                            <!-- عنوان المهمة أو الاجتماع -->
+                            <div class="md:col-span-4">
+                                <label class="block text-[11px] text-slate-400 mb-1">عنوان المهمة أو الاجتماع</label>
+                                <input type="text" id="eventSummary" required
+                                    placeholder="مثال: مراجعة معمارية المشروع..."
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 outline-none transition">
+                            </div>
+
+                            <!-- وقت وتاريخ البداية -->
+                            <div class="md:col-span-3">
+                                <label class="block text-[11px] text-slate-400 mb-1">من (تاريخ ووقت البداية)</label>
+                                <input type="text" id="eventStart" required
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition">
+                                     <!-- <input type="text" id="eventStart1" required placeholder="اضغط لاختيار البداية..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:border-blue-500 outline-none transition cursor-pointer"> -->
+                            </div>
+
+                            <!-- وقت وتاريخ النهاية -->
+                            <div class="md:col-span-3">
+                                <label class="block text-[11px] text-slate-400 mb-1">إلى (تاريخ ووقت النهاية)</label>
+                                <input type="text" id="eventEnd" required
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition">
+                            </div>
+
+                            <!-- نوع العنصر في التقويم -->
+                            <div class="md:col-span-2">
+                                <label class="block text-[11px] text-slate-400 mb-1">النوع في التقويم</label>
+                                <select id="eventType"
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition cursor-pointer">
+                                    <option value="task">✓ مهمة (Google Task)</option>
+                                    <option value="meet">🎥 اجتماع (Calendar Meet)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- شريط الأدوات السفلي للنموذج: الألوان + زر المدعوين + زر الإضافة -->
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800/80">
+
+                            <div class="flex flex-wrap items-center gap-5">
+                                <!-- اختيار اللون -->
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-xs text-slate-400">لون التقويم:</span>
+                                    <div class="flex items-center gap-2" id="colorPickerContainer">
+                                        <button type="button" onclick="UIController.selectColor('7', '#06b6d4')"
+                                            data-color="7"
+                                            class="color-btn w-6 h-6 rounded-full bg-cyan-500 ring-2 ring-offset-2 ring-offset-slate-900 ring-cyan-400 transition transform scale-110"></button>
+                                        <button type="button" onclick="UIController.selectColor('1', '#6366f1')"
+                                            data-color="1"
+                                            class="color-btn w-6 h-6 rounded-full bg-indigo-500 opacity-70 hover:opacity-100 transition"></button>
+                                        <button type="button" onclick="UIController.selectColor('10', '#10b981')"
+                                            data-color="10"
+                                            class="color-btn w-6 h-6 rounded-full bg-emerald-500 opacity-70 hover:opacity-100 transition"></button>
+                                        <button type="button" onclick="UIController.selectColor('5', '#eab308')"
+                                            data-color="5"
+                                            class="color-btn w-6 h-6 rounded-full bg-amber-500 opacity-70 hover:opacity-100 transition"></button>
+                                        <button type="button" onclick="UIController.selectColor('11', '#f43f5e')"
+                                            data-color="11"
+                                            class="color-btn w-6 h-6 rounded-full bg-rose-500 opacity-70 hover:opacity-100 transition"></button>
+                                        <button type="button" onclick="UIController.selectColor('3', '#a855f7')"
+                                            data-color="3"
+                                            class="color-btn w-6 h-6 rounded-full bg-purple-500 opacity-70 hover:opacity-100 transition"></button>
+                                    </div>
+                                </div>
+
+                                <!-- زر فتح نافذة إضافة المدعوين -->
+                                <button type="button" onclick="InviteeModalController.open()"
+                                    class="bg-slate-800/90 hover:bg-slate-700/90 text-blue-300 border border-blue-500/30 rounded-xl px-3.5 py-2 text-xs font-bold transition flex items-center gap-2 shadow-sm">
+                                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
+                                        </path>
+                                    </svg>
+                                    <span>إضافة مدعوين</span>
+                                    <span id="inviteeCountBadge"
+                                        class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
+                                </button>
+                            </div>
+
+                            <!-- خيار الويدجت + زر الإرسال -->
+                            <div class="flex items-center gap-4">
+                                <label
+                                    class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+                                    <input type="checkbox" id="showInWidgetCheck" checked
+                                        class="w-4 h-4 rounded accent-blue-600">
+                                    إظهار في ويدجت الشاشة
+                                </label>
+                                <button type="submit" id="submitEventBtn" disabled
+                                    class="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/25 flex items-center gap-2">
+                                    <svg class="w-4 h-4 -rotate-45" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                    </svg>
+                                    إضافة ومزامنة
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- معاينة سريعة للمدعوين المحددين أسفل النموذج -->
+                        <div id="selectedInviteesPreview" class="hidden pt-2 flex-wrap items-center gap-2"></div>
+                    </form>
+                </div>
+
+                <!-- بطاقة الفلترة والبحث وقائمة المهام والأحداث -->
+                <div class="glass-card rounded-2xl p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+
+                        <!-- أزرار الفلترة (بما فيها المهام المشتركة) -->
+                        <div
+                            class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 flex-wrap gap-1">
+                            <button onclick="UIController.setFilter('all')" id="filter-all"
+                                class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white transition">
+                                الكل
+                            </button>
+                            <button onclick="UIController.setFilter('pending')" id="filter-pending"
+                                class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                                قيد الانتظار
+                            </button>
+                            <button onclick="UIController.setFilter('completed')" id="filter-completed"
+                                class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                                المكتملة
+                            </button>
+                            <button onclick="UIController.setFilter('shared')" id="filter-shared"
+                                class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                                <span>👥</span> المهام المشتركة
+                            </button>
+                            <button onclick="UIController.setFilter('meet')" id="filter-meet"
+                                class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                                اجتماعات التقويم
+                            </button>
+                        </div>
+
+                        <!-- البحث الفوري في المهام -->
+                        <div class="relative w-full sm:w-72">
+                            <input type="text" id="mainSearchInput" oninput="UIController.renderAll()"
+                                placeholder="بحث في المهام، الاجتماعات، أو المدعوين..."
+                                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pr-9 pl-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none">
+                            <svg class="w-4 h-4 text-slate-500 absolute right-3 top-2.5" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- قائمة المهام -->
+                    <div id="eventsContainer" class="space-y-3">
+                        <p class="text-slate-400 text-center py-10 text-sm">سجل الدخول بحساب Google لعرض ومزامنة مهامك
+                            واجتماعاتك.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- القسم الثاني: معاينة شاشة الهاتف والـ Widget -->
+            <section id="mobileWidgetSection" class="hidden flex-col items-center justify-start">
+                <div
+                    class="w-[350px] bg-slate-950 rounded-[44px] p-3.5 border-[6px] border-slate-800 shadow-2xl relative">
+                    <div class="w-28 h-5 bg-slate-900 rounded-b-2xl mx-auto mb-2 flex items-center justify-center">
+                        <div class="w-10 h-1 bg-slate-700 rounded-full"></div>
+                    </div>
+                    <div
+                        class="bg-gradient-to-b from-slate-900 via-[#0f172a] to-[#1e1b4b] rounded-[32px] p-4 min-h-[580px] flex flex-col justify-between">
+                        <div>
+                            <div class="text-center my-3">
+                                <p id="phoneClock" class="text-4xl font-light text-white tracking-wider">09:30</p>
+                                <p id="phoneDate" class="text-xs text-slate-300 mt-1">الجمعة، 23 تشرين الأول</p>
+                            </div>
+                            <div
+                                class="bg-slate-900/85 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-4 shadow-xl mt-3">
+                                <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center text-xs font-bold">
+                                            📅</div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-white">مهام تقويم Google</h4>
+                                            <p id="widgetProgressText" class="text-[10px] text-emerald-400">0 من 0 مكتمل
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button onclick="document.getElementById('eventSummary').focus()"
+                                        class="w-7 h-7 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center text-sm font-bold">+</button>
+                                </div>
+                                <div id="widgetEventsContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    <p class="text-xs text-slate-400 text-center py-6">لا توجد مهام مفعلة للويدجت</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3 pt-4 mt-4 border-t border-white/10">
+                            <div class="h-11 rounded-2xl bg-white/10 flex items-center justify-center text-lg">📞</div>
+                            <div class="h-11 rounded-2xl bg-white/10 flex items-center justify-center text-lg">💬</div>
+                            <div class="h-11 rounded-2xl bg-white/10 flex items-center justify-center text-lg">🌐</div>
+                            <div
+                                class="h-11 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-lg">
+                                📅</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!--==================================================
+        نافذة إدارة وإضافة المدعوين (Invitee Modal)
+    ===================================================-->
+    <div id="inviteeModal"
+        class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[#1e2330] border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-5">
+
+            <!-- رأس النافذة -->
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <span>👥</span> إدارة وإضافة المدعوين
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">أدخل البريد الإلكتروني واضغط Enter أو اختر من الإيميلات
+                        المحفوظة</p>
+                </div>
+                <button type="button" onclick="InviteeModalController.close()"
+                    class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">✕</button>
+            </div>
+
+            <!-- صندوق الكبسولات (Chips Input Box) المطابق للصورة المرفقة -->
+            <div>
+                <div onclick="document.getElementById('chipEmailInput').focus()"
+                    class="bg-[#282c37] border-2 border-[#8ab4f8] rounded-xl p-3 min-h-[76px] flex flex-wrap items-center gap-2 relative cursor-text transition">
+
+                    <!-- الكبسولات المختارة حالياً -->
+                    <div id="modalChipsContainer" class="flex flex-wrap items-center gap-2"></div>
+
+                    <!-- حقل كتابة إيميل جديد -->
+                    <input type="email" id="chipEmailInput" dir="ltr" placeholder="example@gmail.com ثم اضغط Enter..."
+                        onkeydown="InviteeModalController.handleChipKeydown(event)"
+                        class="bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none flex-1 min-w-[180px] pl-7" />
+
+                    <!-- أيقونة المساعدة كما في الصورة -->
+                    <span title="اكتب البريد الإلكتروني واضغط Enter أو فاصلة لإضافته وحفظه تلقائياً"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-help select-none text-sm">
+                        ⓘ
+                    </span>
+                </div>
+                <!-- عداد المدعوين X / 98 -->
+                <div class="flex justify-between items-center mt-1.5 px-1">
+                    <span id="emailErrorMsg" class="text-[11px] text-rose-400 hidden">يرجى إدخال بريد إلكتروني
+                        صحيح</span>
+                    <span id="chipCounterText" dir="ltr" class="text-xs text-slate-400 font-mono mr-auto">0 / 98</span>
+                </div>
+            </div>
+
+            <!-- شريط البحث الفوري في الإيميلات المحفوظة -->
+            <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-slate-300">الإيميلات المحفوظة تلقائياً</label>
+                    <span id="savedEmailsCount" class="text-[11px] text-slate-400">0 محفوظ</span>
+                </div>
+
+                <!-- حقل البحث الفعال (Functional Search Bar) -->
+                <div class="relative">
+                    <input type="text" id="savedEmailSearchInput" oninput="InviteeModalController.renderSavedList()"
+                        placeholder="ابحث في الإيميلات المحفوظة سابقاً..."
+                        class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pr-9 pl-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-blue-400 outline-none">
+                    <svg class="w-4 h-4 text-slate-500 absolute right-3 top-2.5" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+
+                <!-- قائمة الإيميلات المحفوظة (مع Checkbox وزر حذف) -->
+                <div id="savedEmailsListContainer"
+                    class="max-h-48 overflow-y-auto space-y-1.5 bg-slate-900/60 border border-slate-800 rounded-xl p-2">
+                </div>
+            </div>
+
+            <!-- أزرار التأكيد والإلغاء -->
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-700/80">
+                <button type="button" onclick="InviteeModalController.clearAllSelected()"
+                    class="text-xs text-slate-400 hover:text-rose-400 px-3 py-2 transition ml-auto">
+                    مسح التحديد
+                </button>
+                <button type="button" onclick="InviteeModalController.close()"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                    إغلاق
+                </button>
+                <button type="button" onclick="InviteeModalController.confirmSelection()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/25">
+                    إضافة المدعوين المحددين
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- 3. نافذة المدعوين الإضافية (إذا كانوا أكثر من 3) -->
+    <div id="attendeesModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[#1e2330] border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                <h3 class="text-base font-bold text-white">👥 حالة جميع المدعوين</h3>
+                <button onclick="AttendeesModalController.close()" class="text-slate-400 hover:text-white p-1">✕</button>
+            </div>
+            
+            <!-- هذا هو العنصر المفقود الذي كان يسبب الخطأ -->
+            <div id="attendeesModalList" class="space-y-2 max-h-[50vh] overflow-y-auto pr-1"></div>
+            
+            <div class="pt-2 text-left">
+                <button onclick="AttendeesModalController.close()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-xl transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+    <!--========================================================
+        الكود البرمجي النظيف (Clean Modular Architecture)
+    =========================================================-->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        /**
+         * 1. إعدادات النظام والثوابت (AppConfig)
+         */
+        const AppConfig = {
+            // ⚠️ ضع مفاتيحك الخاصة من Google Cloud Console هنا:
+            CLIENT_ID: '852444684672-ctblajjrvtrqe2dq67trrjajnap8e75s.apps.googleusercontent.com',
+            API_KEY: 'AIzaSyAwj86BRf8w40ISqKCI5R1FG_-61Oab1Fw',
+
+            MAX_INVITEES: 98,
+            CALENDAR_DISCOVERY: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+            TASKS_DISCOVERY: 'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
+            SCOPES: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
+
+            STORAGE_KEYS: {
+                TOKEN: 'gapi_access_token',
+                EXPIRY: 'gapi_token_expiry',
+                SAVED_EMAILS: 'tazamun_saved_emails_v1'
+            },
+
+            COLORS: {
+                '7': { hex: '#06b6d4', border: 'border-r-cyan-400' },
+                '1': { hex: '#6366f1', border: 'border-r-indigo-500' },
+                '10': { hex: '#10b981', border: 'border-r-emerald-500' },
+                '5': { hex: '#eab308', border: 'border-r-amber-400' },
+                '11': { hex: '#f43f5e', border: 'border-r-rose-500' },
+                '3': { hex: '#a855f7', border: 'border-r-purple-500' }
+            },
+
+            RSVP_MAP: {
+                'accepted': { text: 'قبل الدعوة', classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: '✓' },
+                'declined': { text: 'اعتذر', classes: 'bg-rose-500/15 text-rose-400 border-rose-500/30', icon: '✕' },
+                'tentative': { text: 'ربما', classes: 'bg-amber-500/15 text-amber-400 border-amber-500/30', icon: '؟' },
+                'needsAction': { text: 'بانتظار الرد', classes: 'bg-slate-800 text-slate-300 border-slate-700', icon: '⏳' }
+            }
+        };
+
+        /**
+         * 2. مخزن الحالة المركزي (AppState)
+         */
+        const AppState = {
+            items: [],               // جميع المهام والأحداث الموحدة
+            currentFilter: 'all',    // all | pending | completed | shared | meet
+            selectedColorId: '7',
+            selectedInvitees: [],    // الإيميلات المختارة للمهمة الحالية
+            savedEmails: [],         // الإيميلات المحفوظة في localStorage
+            tasksApiAvailable: false,
+
+            init() {
+                try {
+                    const raw = localStorage.getItem(AppConfig.STORAGE_KEYS.SAVED_EMAILS);
+                    this.savedEmails = raw ? JSON.parse(raw) : [];
+                } catch {
+                    this.savedEmails = [];
+                }
+            },
+
+            saveEmailToHistory(email) {
+                const normalized = email.trim().toLowerCase();
+                if (!normalized) return;
+                if (!this.savedEmails.includes(normalized)) {
+                    this.savedEmails.unshift(normalized);
+                    localStorage.setItem(AppConfig.STORAGE_KEYS.SAVED_EMAILS, JSON.stringify(this.savedEmails));
+                }
+            },
+
+            deleteEmailFromHistory(email) {
+                const normalized = email.trim().toLowerCase();
+                this.savedEmails = this.savedEmails.filter(e => e !== normalized);
+                this.selectedInvitees = this.selectedInvitees.filter(e => e !== normalized);
+                localStorage.setItem(AppConfig.STORAGE_KEYS.SAVED_EMAILS, JSON.stringify(this.savedEmails));
+            }
+        };
+
+        /**
+         * 3. متحكم نافذة المدعوين (InviteeModalController)
+         */
+                const AttendeesModalController = {
+            open(eventId) {
+                const item = AppState.items.find(i => i.id === eventId);
+                if (!item) return;
+                const guests = item.attendees.filter(a => !a.self);
+                document.getElementById('attendeesModalList').innerHTML = guests.map(g => {
+                    const rsvp = AppConfig.RSVP_MAP[g.status] || AppConfig.RSVP_MAP.needsAction;
+                    return `<div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/80 border border-slate-700"><span class="text-xs text-slate-200 font-mono truncate max-w-[200px]" dir="ltr">${g.email}</span><span class="text-[10px] px-2 py-1 rounded-lg border ${rsvp.classes}">${rsvp.icon} ${rsvp.text}</span></div>`;
+                }).join('');
+                document.getElementById('attendeesModal').classList.remove('hidden'); document.getElementById('attendeesModal').classList.add('flex');
+            },
+            close() { document.getElementById('attendeesModal').classList.add('hidden'); document.getElementById('attendeesModal').classList.remove('flex'); }
+        };
+
+
+        const InviteeModalController = {
+            isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+            },
+
+            open() {
+                const modal = document.getElementById('inviteeModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                this.renderChips();
+                this.renderSavedList();
+                setTimeout(() => document.getElementById('chipEmailInput').focus(), 50);
+            },
+
+            close() {
+                const modal = document.getElementById('inviteeModal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.getElementById('emailErrorMsg').classList.add('hidden');
+            },
+
+            handleChipKeydown(event) {
+                const input = event.target;
+                const val = input.value.replace(/,/g, '').trim();
+
+                if (event.key === 'Enter' || event.key === ',' || event.key === ' ') {
+                    if (!val) return;
+                    event.preventDefault();
+                    this.addEmailChip(val);
+                } else if (event.key === 'Backspace' && !input.value && AppState.selectedInvitees.length > 0) {
+                    AppState.selectedInvitees.pop();
+                    this.renderChips();
+                    this.renderSavedList();
+                    UIController.renderFormInviteesPreview();
+                }
+            },
+
+            addEmailChip(rawEmail) {
+                const email = rawEmail.trim().toLowerCase();
+                const errEl = document.getElementById('emailErrorMsg');
+
+                if (!this.isValidEmail(email)) {
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+                errEl.classList.add('hidden');
+
+                if (AppState.selectedInvitees.length >= AppConfig.MAX_INVITEES) return;
+
+                if (!AppState.selectedInvitees.includes(email)) {
+                    AppState.selectedInvitees.push(email);
+                }
+
+                // حفظ تلقائي في الإيميلات المحفوظة
+                AppState.saveEmailToHistory(email);
+
+                document.getElementById('chipEmailInput').value = '';
+                this.renderChips();
+                this.renderSavedList();
+                UIController.renderFormInviteesPreview();
+            },
+
+            removeChip(email) {
+                AppState.selectedInvitees = AppState.selectedInvitees.filter(e => e !== email);
+                this.renderChips();
+                this.renderSavedList();
+                UIController.renderFormInviteesPreview();
+            },
+
+            toggleSavedEmailCheckbox(email) {
+                if (AppState.selectedInvitees.includes(email)) {
+                    AppState.selectedInvitees = AppState.selectedInvitees.filter(e => e !== email);
+                } else if (AppState.selectedInvitees.length < AppConfig.MAX_INVITEES) {
+                    AppState.selectedInvitees.push(email);
+                }
+                this.renderChips();
+                this.renderSavedList();
+                UIController.renderFormInviteesPreview();
+            },
+
+            deleteSavedEmail(email) {
+                AppState.deleteEmailFromHistory(email);
+                this.renderChips();
+                this.renderSavedList();
+                UIController.renderFormInviteesPreview();
+            },
+
+            clearAllSelected() {
+                AppState.selectedInvitees = [];
+                this.renderChips();
+                this.renderSavedList();
+                UIController.renderFormInviteesPreview();
+            },
+
+            confirmSelection() {
+                const pendingInput = document.getElementById('chipEmailInput').value.trim();
+                if (pendingInput && this.isValidEmail(pendingInput)) {
+                    this.addEmailChip(pendingInput);
+                }
+                UIController.renderFormInviteesPreview();
+                this.close();
+            },
+
+            renderChips() {
+                const container = document.getElementById('modalChipsContainer');
+                const counter = document.getElementById('chipCounterText');
+
+                counter.innerText = `${AppState.selectedInvitees.length} / ${AppConfig.MAX_INVITEES}`;
+
+                container.innerHTML = AppState.selectedInvitees.map(email => `
+                    <div dir="ltr" class="flex items-center gap-2 bg-[#2d323e] border border-slate-500/80 text-slate-100 text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
+                        <span>${email}</span>
+                        <button type="button" onclick="event.stopPropagation(); InviteeModalController.removeChip('${email}')"
+                            class="w-4 h-4 rounded-full bg-slate-400 hover:bg-rose-400 text-slate-900 flex items-center justify-center text-[10px] font-extrabold transition">
+                            ✕
+                        </button>
+                    </div>
+                `).join('');
+            },
+
+            renderSavedList() {
+                const listEl = document.getElementById('savedEmailsListContainer');
+                const countEl = document.getElementById('savedEmailsCount');
+                const query = (document.getElementById('savedEmailSearchInput').value || '').trim().toLowerCase();
+
+                countEl.innerText = `${AppState.savedEmails.length} محفوظ`;
+
+                const filtered = AppState.savedEmails.filter(email => email.includes(query));
+
+                if (filtered.length === 0) {
+                    listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">لا توجد إيميلات محفوظة مطابقة للبحث.</p>`;
+                    return;
+                }
+
+                listEl.innerHTML = filtered.map(email => {
+                    const isChecked = AppState.selectedInvitees.includes(email);
+                    return `
+                        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 transition">
+                            <label class="flex items-center gap-3 cursor-pointer flex-1 overflow-hidden">
+                                <input type="checkbox" ${isChecked ? 'checked' : ''}
+                                    onchange="InviteeModalController.toggleSavedEmailCheckbox('${email}')"
+                                    class="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
+                                <span dir="ltr" class="text-xs text-slate-200 truncate font-medium">${email}</span>
+                            </label>
+                            <button type="button" onclick="InviteeModalController.deleteSavedEmail('${email}')"
+                                title="حذف من الإيميلات المحفوظة"
+                                class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg border border-rose-500/20 transition flex-shrink-0">
+                                حذف
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        };
+
+        /**
+         * 4. خدمة الاتصال بـ Google Calendar API + Google Tasks API
+         */
+        const GoogleApiService = {
+            tokenClient: null,
+            gapiReady: false,
+            gisReady: false,
+
+            onGapiLoaded() {
+                gapi.load('client', async () => {
+                    try {
+                        await gapi.client.init({
+                            apiKey: AppConfig.API_KEY,
+                            discoveryDocs: [AppConfig.CALENDAR_DISCOVERY]
+                        });
+                        // محاولة تحميل Google Tasks API بشكل مرن
+                        try {
+                            await gapi.client.load(AppConfig.TASKS_DISCOVERY);
+                            AppState.tasksApiAvailable = true;
+                        } catch {
+                            AppState.tasksApiAvailable = false;
+                        }
+                        this.gapiReady = true;
+                        this.restoreSession();
+                    } catch (err) {
+                        console.error('GAPI Init Error:', err);
+                    }
+                });
+            },
+
+            onGisLoaded() {
+                this.tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: AppConfig.CLIENT_ID,
+                    scope: AppConfig.SCOPES,
+                    callback: (resp) => {
+                        if (resp.error !== undefined) return;
+                        localStorage.setItem(AppConfig.STORAGE_KEYS.TOKEN, resp.access_token);
+                        localStorage.setItem(AppConfig.STORAGE_KEYS.EXPIRY, Date.now() + (resp.expires_in * 1000));
+                        this.onAuthenticated();
+                    }
+                });
+                this.gisReady = true;
+                this.restoreSession();
+            },
+
+            restoreSession() {
+                if (!this.gapiReady || !this.gisReady) return;
+                const savedToken = localStorage.getItem(AppConfig.STORAGE_KEYS.TOKEN);
+                const expiry = localStorage.getItem(AppConfig.STORAGE_KEYS.EXPIRY);
+
+                if (savedToken && expiry && Date.now() < parseInt(expiry)) {
+                    gapi.client.setToken({ access_token: savedToken });
+                    this.onAuthenticated();
+                } else {
+                    document.getElementById('authorizeBtn').classList.remove('hidden');
+                }
+            },
+
+            signIn() {
+                this.tokenClient.requestAccessToken({ prompt: '' });
+            },
+
+            signOut() {
+                const token = gapi.client.getToken();
+                if (token !== null) google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                localStorage.removeItem(AppConfig.STORAGE_KEYS.TOKEN);
+                localStorage.removeItem(AppConfig.STORAGE_KEYS.EXPIRY);
+
+                UIController.setConnectionStatus(false);
+                AppState.items = [];
+                UIController.renderAll();
+            },
+
+            onAuthenticated() {
+                UIController.setConnectionStatus(true);
+                this.syncAllData();
+            },
+
+            // جلب المتوازي والسريع لكل من الأحداث (Calendar) والمهام (Tasks)
+            async syncAllData() {
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+
+                const endRange = new Date();
+                endRange.setDate(endRange.getDate());
+                endRange.setHours(23, 59, 59, 999);
+
+                const calendarPromise = gapi.client.calendar.events.list({
+                    calendarId: 'primary',
+                    timeMin: startOfToday.toISOString(),
+                    timeMax: endRange.toISOString(),
+                    showDeleted: false,
+                    singleEvents: true,
+                    maxResults: 100,
+                    orderBy: 'startTime'
+                });
+
+                const tasksPromise = (AppState.tasksApiAvailable && gapi.client.tasks)
+                    ? gapi.client.tasks.tasks.list({
+                        tasklist: '@default',
+                        showCompleted: true,
+                        showHidden: true,
+                        maxResults: 100
+                    })
+                    : Promise.resolve({ result: { items: [] } });
+
+                const [calRes, taskRes] = await Promise.allSettled([calendarPromise, tasksPromise]);
+
+                const unifiedList = [];
+
+                // 1. معالجة أحداث واجتماعات Google Calendar
+                if (calRes.status === 'fulfilled' && calRes.value.result.items) {
+                    const calItems = calRes.value.result.items.filter(e => {
+                        const t = (e.summary || '').toLowerCase();
+                        return !t.includes('birthday') && !t.includes('عيد ميلاد');
+                    });
+
+                    calItems.forEach(e => {
+                        const rawTitle = e.summary || 'بدون عنوان';
+                        const isComp = rawTitle.includes('[مكتمل]');
+                        const cleanTitle = rawTitle.replace('[مكتمل]', '').trim();
+                        const extProps = (e.extendedProperties && e.extendedProperties.private) || {};
+                        const attendees = (e.attendees || []).map(a => ({
+                            email: a.email,
+                            status: a.responseStatus || 'needsAction',
+                            self: Boolean(a.self)
+                        }));
+
+                        // حفظ أي إيميل مدعو في السجل المحفوظ تلقائياً
+                        attendees.forEach(a => {
+                            if (!a.self) AppState.saveEmailToHistory(a.email);
+                        });
+
+                        const isTaskKind = extProps.itemKind === 'task' && !e.hangoutLink;
+
+                        unifiedList.push({
+                            id: e.id,
+                            source: 'calendar',
+                            kind: isTaskKind ? 'task' : 'meet',
+                            title: cleanTitle,
+                            rawTitle: rawTitle,
+                            completed: isComp,
+                            start: e.start.dateTime || e.start.date,
+                            end: e.end ? (e.end.dateTime || e.end.date) : (e.start.dateTime || e.start.date),
+                            colorId: e.colorId || extProps.colorId || '7',
+                            inWidget: extProps.inWidget !== 'false',
+                            htmlLink: e.htmlLink || 'https://calendar.google.com',
+                            hangoutLink: e.hangoutLink || '',
+                            attendees: attendees
+                        });
+                    });
+                }
+
+                // 2. معالجة المهام الحقيقية من Google Tasks API
+                if (taskRes.status === 'fulfilled' && taskRes.value.result && taskRes.value.result.items) {
+                    taskRes.value.result.items.forEach(t => {
+                        if (!t.title) return;
+                        let meta = { colorId: '10', inWidget: true, startIso: t.due, endIso: t.due };
+                        if (t.notes && t.notes.startsWith('TAZAMUN_META:')) {
+                            try {
+                                meta = { ...meta, ...JSON.parse(t.notes.replace('TAZAMUN_META:', '')) };
+                            } catch { }
+                        }
+
+                        unifiedList.push({
+                            id: t.id,
+                            source: 'tasks',
+                            kind: 'task',
+                            title: t.title,
+                            rawTitle: t.title,
+                            completed: t.status === 'completed',
+                            start: meta.startIso || t.due || new Date().toISOString(),
+                            end: meta.endIso || t.due || new Date().toISOString(),
+                            colorId: meta.colorId || '10',
+                            inWidget: meta.inWidget !== false,
+                            htmlLink: 'https://calendar.google.com/calendar/u/0/r/tasks',
+                            hangoutLink: '',
+                            attendees: []
+                        });
+                    });
+                }
+
+                // ترتيب زمني موحد
+                unifiedList.sort((a, b) => new Date(a.start) - new Date(b.start));
+                AppState.items = unifiedList;
+                UIController.renderAll();
+            }
+        };
+
+        /**
+         * 5. العمليات التفاعلية مع التحديث الفوري (AppActions - Optimistic UI)
+         */
+        const AppActions = {
+            async handleCreateSubmit(e) {
+                e.preventDefault();
+                const title = document.getElementById('eventSummary').value.trim();
+                const startVal = document.getElementById('eventStart').value;
+                const endVal = document.getElementById('eventEnd').value;
+                const selectedType = document.getElementById('eventType').value; // 'task' | 'meet'
+                const inWidget = document.getElementById('showInWidgetCheck').checked;
+                const invitees = [...AppState.selectedInvitees];
+
+                const startDate = new Date(startVal);
+                const endDate = new Date(endVal);
+
+                if (endDate <= startDate) {
+                    alert('يرجى التأكد من أن وقت النهاية يأتي بعد وقت البداية.');
+                    return;
+                }
+
+                // تحديث فوري للواجهة (Optimistic UI)
+                const tempId = 'temp_' + Date.now();
+                const optimisticItem = {
+                    id: tempId,
+                    source: 'calendar', // يتم إرسال كل شيء للتقويم لضمان الوقت الدقيق
+                    kind: selectedType,
+                    title: title,
+                    rawTitle: title,
+                    completed: false,
+                    start: startDate.toISOString(),
+                    end: endDate.toISOString(),
+                    colorId: AppState.selectedColorId,
+                    inWidget: inWidget,
+                    htmlLink: 'https://calendar.google.com',
+                    hangoutLink: '',
+                    attendees: invitees.map(email => ({ email, status: 'needsAction', self: false }))
+                };
+
+                AppState.items.unshift(optimisticItem);
+                UIController.renderAll();
+
+                // تصفير الحقول
+                document.getElementById('eventSummary').value = '';
+                AppState.selectedInvitees = [];
+                UIController.renderFormInviteesPreview();
+
+                try {
+                    // تجهيز الحدث لرفعه لتقويم جوجل
+                    const resource = {
+                        summary: title,
+                        colorId: AppState.selectedColorId,
+                        start: { dateTime: startDate.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                        end: { dateTime: endDate.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                        guestsCanInviteOthers: true,
+                        guestsCanSeeOtherGuests: true,
+                        extendedProperties: {
+                            private: {
+                                itemKind: selectedType,
+                                inWidget: inWidget ? 'true' : 'false',
+                                colorId: AppState.selectedColorId
+                            }
+                        }
+                    };
+
+                    if (invitees.length > 0) resource.attendees = invitees.map(email => ({ email }));
+
+                    // توليد رابط Meet تلقائي للاجتماعات فقط
+                    if (selectedType === 'meet') {
+                        resource.conferenceData = {
+                            createRequest: {
+                                requestId: 'meet_' + Date.now(),
+                                conferenceSolutionKey: { type: 'hangoutsMeet' }
+                            }
+                        };
+                    }
+
+                    // إرسال الطلب لتقويم جوجل
+                    await gapi.client.calendar.events.insert({
+                        calendarId: 'primary',
+                        conferenceDataVersion: 1,
+                        sendUpdates: invitees.length > 0 ? 'all' : 'none',
+                        resource: resource
+                    });
+
+                    await GoogleApiService.syncAllData();
+                } catch (err) {
+                    AppState.items = AppState.items.filter(i => i.id !== tempId);
+                    UIController.renderAll();
+                    alert('تعذر الحفظ في جوجل: ' + (err.result?.error?.message || err.message));
+                }
+            },
+            async toggleComplete(itemId) {
+                const item = AppState.items.find(i => i.id === itemId);
+                if (!item) return;
+
+                // تحديث لحظي للواجهة (Optimistic UI)
+                item.completed = !item.completed;
+                UIController.renderAll();
+
+                try {
+                    if (item.source === 'tasks' && gapi.client.tasks) {
+                        await gapi.client.tasks.tasks.patch({
+                            tasklist: '@default',
+                            task: item.id,
+                            resource: { status: item.completed ? 'completed' : 'needsAction' }
+                        });
+                    } else {
+                        const newSummary = item.completed ? `[مكتمل] ${item.title}` : item.title;
+                        item.rawTitle = newSummary;
+                        await gapi.client.calendar.events.patch({
+                            calendarId: 'primary',
+                            eventId: item.id,
+                            resource: { summary: newSummary }
+                        });
+                    }
+                } catch (err) {
+                    item.completed = !item.completed;
+                    UIController.renderAll();
+                    alert('فشل تحديث حالة المهمة: ' + err.message);
+                }
+            },
+
+            async toggleWidget(itemId) {
+                const item = AppState.items.find(i => i.id === itemId);
+                if (!item) return;
+
+                item.inWidget = !item.inWidget;
+                UIController.renderAll();
+
+                try {
+                    if (item.source === 'calendar') {
+                        await gapi.client.calendar.events.patch({
+                            calendarId: 'primary',
+                            eventId: item.id,
+                            resource: {
+                                extendedProperties: {
+                                    private: { inWidget: item.inWidget ? 'true' : 'false' }
+                                }
+                            }
+                        });
+                    }
+                } catch { }
+            },
+
+            async deleteItem(itemId) {
+                const item = AppState.items.find(i => i.id === itemId);
+                if (!item) return;
+                if (!confirm(`هل تريد حذف "${item.title}" نهائياً؟`)) return;
+
+                const backup = [...AppState.items];
+                AppState.items = AppState.items.filter(i => i.id !== itemId);
+                UIController.renderAll();
+
+                try {
+                    if (item.source === 'tasks' && gapi.client.tasks) {
+                        await gapi.client.tasks.tasks.delete({
+                            tasklist: '@default',
+                            task: item.id
+                        });
+                    } else {
+                        await gapi.client.calendar.events.delete({
+                            calendarId: 'primary',
+                            eventId: item.id,
+                            sendUpdates: item.attendees.length > 0 ? 'all' : 'none'
+                        });
+                    }
+                } catch (err) {
+                    AppState.items = backup;
+                    UIController.renderAll();
+                    alert('تعذر الحذف: ' + err.message);
+                }
+            }
+        };
+
+        
+        const UIController = {
+            initDefaults() {
+                const now = new Date();
+                const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+                const toLocalISO = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+                flatpickr("#eventStart", { enableTime: true, dateFormat: "H:i Y-m-d", defaultDate: now, time_24hr: false });
+                 flatpickr("#eventEnd", { enableTime: true, dateFormat: "H:i Y-m-d", defaultDate: oneHourLater, time_24hr: false });
+                document.getElementById('todayDayNum').innerText = now.getDate();
+                document.getElementById('todayMonthStr').innerText = now.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+
+                this.updateClock();
+                setInterval(() => this.updateClock(), 30000);
+            },
+
+            updateClock() {
+                const now = new Date();
+                document.getElementById('phoneClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                document.getElementById('phoneDate').innerText = now.toLocaleDateString('ar-JO', { weekday: 'long', day: 'numeric', month: 'long' });
+            },
+
+            setConnectionStatus(connected) {
+                const dot = document.getElementById('statusDot');
+                const title = document.getElementById('connectionTitle');
+                const sub = document.getElementById('syncSubtext');
+
+                if (connected) {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+                    title.innerText = 'حساب Google Calendar & Tasks متصل';
+                    sub.innerHTML = 'متصل بنجاح • آخر مزامنة: <span class="text-blue-400">الآن</span>';
+                    document.getElementById('authorizeBtn').classList.add('hidden');
+                    document.getElementById('refreshBtn').classList.remove('hidden');
+                    document.getElementById('signoutBtn').classList.remove('hidden');
+                    document.getElementById('submitEventBtn').disabled = false;
+                } else {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    title.innerText = 'غير متصل';
+                    sub.innerText = 'تم تسجيل الخروج من الحساب';
+                    document.getElementById('authorizeBtn').classList.remove('hidden');
+                    document.getElementById('refreshBtn').classList.add('hidden');
+                    document.getElementById('signoutBtn').classList.add('hidden');
+                    document.getElementById('submitEventBtn').disabled = true;
+                }
+            },
+
+            selectColor(colorId, hex) {
+                AppState.selectedColorId = colorId;
+                document.querySelectorAll('.color-btn').forEach(btn => {
+                    if (btn.dataset.color === colorId) {
+                        btn.className = 'color-btn w-6 h-6 rounded-full ring-2 ring-offset-2 ring-offset-slate-900 transition transform scale-110';
+                        btn.style.backgroundColor = hex;
+                    } else {
+                        btn.className = 'color-btn w-6 h-6 rounded-full opacity-60 hover:opacity-100 transition';
+                        btn.style.backgroundColor = AppConfig.COLORS[btn.dataset.color].hex;
+                    }
+                });
+            },
+
+            setFilter(filterName) {
+                AppState.currentFilter = filterName;
+                document.querySelectorAll('.filter-tab').forEach(btn => {
+                    btn.className = 'filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5';
+                });
+                document.getElementById(`filter-${filterName}`).className = 'filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white shadow transition flex items-center gap-1.5';
+                this.renderAll();
+            },
+            renderFormInviteesPreview() {
+                const badge = document.getElementById('inviteeCountBadge');
+                const preview = document.getElementById('selectedInviteesPreview');
+                const count = AppState.selectedInvitees.length;
+
+                if (count === 0) {
+                    badge.classList.add('hidden');
+                    preview.classList.add('hidden');
+                    preview.innerHTML = '';
+                    return;
+                }
+
+                badge.innerText = count;
+                badge.classList.remove('hidden');
+                preview.classList.remove('hidden');
+                preview.classList.add('flex');
+
+                preview.innerHTML = `
+                    <span class="text-[11px] text-slate-400">المدعوون المحددون:</span>
+                    ${AppState.selectedInvitees.map(email => `
+                        <span dir="ltr" class="text-[11px] bg-blue-500/15 text-blue-300 border border-blue-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                            ${email}
+                            <button type="button" onclick="InviteeModalController.removeChip('${email}')" class="hover:text-rose-400 font-bold">✕</button>
+                        </span>
+                    `).join('')}
+                `;
+            },
+
+            formatRange(item) {
+                const s = new Date(item.start);
+                const e = new Date(item.end || item.start);
+                const dOpts = { month: 'short', day: 'numeric' };
+                const tOpts = { hour: '2-digit', minute: '2-digit' };
+
+                const sDay = s.toLocaleDateString('ar-JO', dOpts);
+                const eDay = e.toLocaleDateString('ar-JO', dOpts);
+                const sTime = s.toLocaleTimeString('ar-JO', tOpts);
+                const eTime = e.toLocaleTimeString('ar-JO', tOpts);
+
+                if (s.toDateString() === e.toDateString()) {
+                    return `📅 ${sDay} • ⏰ من ${sTime} إلى ${eTime}`;
+                }
+                return `📅 من ${sDay} (${sTime}) ← إلى ${eDay} (${eTime})`;
+            },
+
+            renderAttendeesRsvp(attendees, itemId) {
+                const guests = (attendees || []).filter(a => !a.self);
+                if (guests.length === 0) return '';
+
+                const acceptedCount = guests.filter(g => g.status === 'accepted').length;
+
+                if(guests.length > 3){
+                    return `<div class = "mt-2.5 pt-2.5 border-t border-slate-800/90 flex-warp item-center justify-between gap-2">
+                                <span class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
+                                    المدعوين (${acceptedCount}/${guests.length} قبلوا):
+                                    </span>
+                                    <button onclick ="event.stopPropagation(); AttendeesModalController.open('${itemId}')" class = "text-[10px] bg-slate-800 border border-slate-300 px-3 py-1 rounded-lg hover:bg-slate-700 transition shadow-sm">
+                                        عرض جميع المدعوين (${guests.length})
+                                    </button>
+                            </div>
+                        `;
+                }
+
+                const badgesHtml = guests.map(guest => {
+                    const rsvp = AppConfig.RSVP_MAP[guest.status] || AppConfig.RSVP_MAP.needsAction;
+                    return `
+                        <div dir="ltr" class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border ${rsvp.classes}">
+                            <span>${rsvp.icon}</span>
+                            <span class="font-medium">${guest.email}</span>
+                            <span dir="rtl" class="font-bold opacity-90">(${rsvp.text})</span>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="mt-2.5 pt-2.5 border-t border-slate-800/90 flex flex-wrap items-center gap-2">
+                        <span class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
+                            👥 حالة المدعوين (${acceptedCount}/${guests.length} قبلوا الدعوة):
+                        </span>
+                        ${badgesHtml}
+                    </div>
+                `;
+            },
+
+            renderAll() {
+                const container = document.getElementById('eventsContainer');
+                const widgetContainer = document.getElementById('widgetEventsContainer');
+                const searchQuery = (document.getElementById('mainSearchInput').value || '').trim().toLowerCase();
+
+                const total = AppState.items.length;
+                const completed = AppState.items.filter(i => i.completed).length;
+                const pending = total - completed;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                document.getElementById('statTotal').innerText = total;
+                document.getElementById('statCompleted').innerText = completed;
+                document.getElementById('statPending').innerText = pending;
+                document.getElementById('progressPercentText').innerText = `${percent}%`;
+
+                const circumference = 251.2;
+                document.getElementById('progressRingCircle').style.strokeDashoffset = circumference - (percent / 100) * circumference;
+
+                // تطبيق الفلتر والبحث
+                const filtered = AppState.items.filter(item => {
+                    const guests = (item.attendees || []).filter(a => !a.self);
+                    const isShared = guests.length > 0;
+                    const isMeet = item.kind === 'meet' || Boolean(item.hangoutLink);
+
+                    if (AppState.currentFilter === 'pending' && item.completed) return false;
+                    if (AppState.currentFilter === 'completed' && !item.completed) return false;
+                    if (AppState.currentFilter === 'shared' && !isShared) return false;
+                    if (AppState.currentFilter === 'meet' && !isMeet) return false;
+
+                    if (searchQuery) {
+                        const inTitle = item.title.toLowerCase().includes(searchQuery);
+                        const inGuests = guests.some(g => g.email.toLowerCase().includes(searchQuery));
+                        if (!inTitle && !inGuests) return false;
+                    }
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<p class="text-slate-400 text-center py-10 text-sm">لا توجد مهام أو اجتماعات مطابقة لهذا الفلتر.</p>`;
+                } else {
+                    container.innerHTML = filtered.map(item => {
+                        const colorObj = AppConfig.COLORS[item.colorId] || AppConfig.COLORS['7'];
+                        const guests = (item.attendees || []).filter(a => !a.self);
+                        const isShared = guests.length > 0;
+                        const isMeet = item.kind === 'meet' || Boolean(item.hangoutLink);
+
+                        return `
+                            <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 border-r-4 ${colorObj.border} hover:border-slate-700 transition ${item.completed ? 'opacity-65' : ''}">
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    
+                                    <!-- معلومات المهمة والوقت -->
+                                    <div class="flex items-start gap-3.5">
+                                        <button onclick="AppActions.toggleComplete('${item.id}')"
+                                            class="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition flex-shrink-0 ${item.completed ? 'bg-emerald-500 text-white shadow shadow-emerald-500/30' : 'border-2 border-slate-600 hover:border-blue-400 text-transparent'}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </button>
+
+                                        <div>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <h4 class="font-bold text-sm md:text-base ${item.completed ? 'line-through text-slate-400' : 'text-white'}">${item.title}</h4>
+                                                ${isMeet
+                                ? `<span class="text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-md">🎥 اجتماع Calendar</span>`
+                                : `<span class="text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-md">✓ مهمة Task</span>`
+                            }
+                                                ${isShared
+                                ? `<span class="text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-md">👥 مشتركة (${guests.length})</span>`
+                                : ''
+                            }
+                                            </div>
+
+                                            <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-1 flex-wrap">
+                                                <span>${this.formatRange(item)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- الأزرار الجانبية (رابط Google Meet المباشر + الويدجت + الحذف) -->
+                                    <div class="flex items-center gap-2 self-end sm:self-center flex-wrap">
+                                        ${item.hangoutLink ? `
+                                            <a href="${item.hangoutLink}" target="_blank"
+                                                class="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl transition shadow shadow-emerald-600/20 flex items-center gap-1">
+                                                🎥 دخول الاجتماع المباشر
+                                            </a>
+                                        ` : ''}
+                                        <button onclick="AppActions.toggleWidget('${item.id}')"
+                                            class="text-[11px] font-semibold px-3 py-1.5 rounded-xl border transition flex items-center gap-1 ${item.inWidget ? 'bg-blue-600/15 text-blue-400 border-blue-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}">
+                                            📱 ${item.inWidget ? 'في الويدجت' : 'مخفي'}
+                                        </button>
+                                        <a href="${item.htmlLink}" target="_blank" title="فتح في جوجل"
+                                            class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl border border-slate-700 transition">
+                                            ↗
+                                        </a>
+                                        <button onclick="AppActions.deleteItem('${item.id}')" title="حذف نهائي"
+                                            class="text-slate-400 hover:text-rose-400 bg-slate-800/60 hover:bg-rose-500/10 p-2 rounded-xl border border-transparent hover:border-rose-500/20 transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- قسم عرض حالة قبول المدعوين للمهام المشتركة -->
+                                ${this.renderAttendeesRsvp(item.attendees, item.id)}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // تحديث ويدجت الهاتف
+                const widgetItems = AppState.items.filter(i => i.inWidget);
+                document.getElementById('widgetProgressText').innerText = `${completed} من ${total} مكتمل`;
+
+                if (widgetItems.length === 0) {
+                    widgetContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">لا توجد مهام مفعلة للويدجت</p>`;
+                } else {
+                    widgetContainer.innerHTML = widgetItems.map(item => {
+                        const colorObj = AppConfig.COLORS[item.colorId] || AppConfig.COLORS['7'];
+                        return `
+                            <div onclick="AppActions.toggleComplete('${item.id}')"
+                                class="p-2.5 rounded-xl bg-slate-800/90 border border-slate-700/70 border-r-4 ${colorObj.border} flex items-center justify-between cursor-pointer hover:bg-slate-800 transition">
+                                <div class="flex items-center gap-2.5 overflow-hidden">
+                                    <div class="w-4 h-4 rounded flex items-center justify-center text-[10px] flex-shrink-0 ${item.completed ? 'bg-emerald-500 text-white' : 'border border-slate-500'}">
+                                        ${item.completed ? '✓' : ''}
+                                    </div>
+                                    <div class="truncate">
+                                        <p class="text-xs font-bold truncate ${item.completed ? 'line-through text-slate-400' : 'text-white'}">${item.title}</p>
+                                        <p class="text-[10px] text-slate-400 truncate">${this.formatRange(item)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        };
+        // تشغيل التهيئة الأولية عند تحميل الصفحة
+
+        window.addEventListener('DOMContentLoaded', () => {
+            AppState.init();
+            UIController.initDefaults();
+        });
+    </script>
+
+    <!-- مكتبات Google الرسمية -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="GoogleApiService.onGapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="GoogleApiService.onGisLoaded()"></script>
+</body>
+
+</html>
